@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import QRCode from 'qrcode';
 import {
   QrCode,
@@ -20,6 +20,11 @@ import {
   Globe,
   Lock,
 } from 'lucide-react';
+import { supabase, type QrHistoryItem } from './lib/supabase';
+import { TEMPLATES, type QrTemplate } from './lib/templates';
+import Templates from './components/Templates';
+import HistorySection from './components/HistorySection';
+import FaqAccordion from './components/FaqAccordion';
 
 type Preset = {
   name: string;
@@ -78,12 +83,47 @@ function App() {
   const [logo, setLogo] = useState<string | null>(null);
   const [filename, setFilename] = useState('aurea-qrcode');
   const [activePreset, setActivePreset] = useState(0);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [historyToast, setHistoryToast] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!historyToast) return;
+    const t = setTimeout(() => setHistoryToast(''), 3000);
+    return () => clearTimeout(t);
+  }, [historyToast]);
 
   const applyPreset = (preset: Preset, idx: number) => {
     setDarkColor(preset.dark);
     setLightColor(preset.light);
     setActivePreset(idx);
+  };
+
+  const applyTemplate = (t: QrTemplate) => {
+    setText(t.content);
+    setDarkColor(t.dark);
+    setLightColor(t.light);
+    setSize(t.size);
+    setLogo(t.logo);
+    setActivePreset(-1);
+    setError('');
+    const el = document.getElementById('studio');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const reapplyFromHistory = (item: QrHistoryItem) => {
+    setText(item.content);
+    if (item.dark_color) setDarkColor(item.dark_color);
+    if (item.light_color) setLightColor(item.light_color);
+    if (item.size) setSize(item.size);
+    setLogo(null);
+    if (item.image_data) {
+      setQrCodeUrl(item.image_data);
+    }
+    if (item.filename) setFilename(item.filename);
+    setActivePreset(-1);
+    const el = document.getElementById('studio');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,11 +204,31 @@ function App() {
         ctx.fill();
         ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
       }
-      setQrCodeUrl(canvas.toDataURL('image/png', 1.0));
+      const imageData = canvas.toDataURL('image/png', 1.0);
+      setQrCodeUrl(imageData);
       const defaultName = text.startsWith('http')
         ? new URL(text).hostname.replace(/[^a-z0-9]/gi, '-')
         : text.slice(0, 30).replace(/[^a-z0-9]/gi, '-');
-      setFilename(defaultName || 'aurea-qrcode');
+      const finalName = defaultName || 'aurea-qrcode';
+      setFilename(finalName);
+
+      // Save to history
+      try {
+        const { error: insertError } = await supabase.from('qr_history').insert({
+          content: text,
+          dark_color: darkColor,
+          light_color: lightColor,
+          size: qrSize,
+          has_logo: !!logo,
+          image_data: imageData,
+          filename: finalName,
+        });
+        if (insertError) throw insertError;
+        setHistoryRefresh((r) => r + 1);
+        setHistoryToast('Saved to your history');
+      } catch {
+        // History save failure should not block the user
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate QR code');
     } finally {
@@ -205,6 +265,16 @@ function App() {
       {/* Decorative top border */}
       <div className="fixed top-0 left-0 right-0 z-40 h-[2px] bg-gradient-to-r from-transparent via-gold-400/60 to-transparent" />
 
+      {/* Toast */}
+      {historyToast && (
+        <div className="fixed left-1/2 top-20 z-50 -translate-x-1/2 animate-fade-up rounded-full border border-gold-400/30 bg-ink-800/90 px-5 py-2.5 text-sm text-gold-100 backdrop-blur-md">
+          <span className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-gold-300" />
+            {historyToast}
+          </span>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="relative z-40 flex items-center justify-between px-6 py-6 lg:px-12">
         <div className="flex items-center gap-3">
@@ -218,8 +288,10 @@ function App() {
         </div>
         <div className="hidden items-center gap-8 md:flex">
           <a href="#studio" className="text-sm text-gold-100/70 transition hover:text-gold-200">Studio</a>
+          <a href="#templates" className="text-sm text-gold-100/70 transition hover:text-gold-200">Templates</a>
+          <a href="#history" className="text-sm text-gold-100/70 transition hover:text-gold-200">History</a>
           <a href="#features" className="text-sm text-gold-100/70 transition hover:text-gold-200">Features</a>
-          <a href="#process" className="text-sm text-gold-100/70 transition hover:text-gold-200">Process</a>
+          <a href="#faq" className="text-sm text-gold-100/70 transition hover:text-gold-200">FAQ</a>
         </div>
         <a href="#studio" className="btn-ghost-gold rounded-full px-5 py-2.5 text-sm font-medium">
           Launch Studio
@@ -247,8 +319,8 @@ function App() {
               Enter the Studio
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
             </a>
-            <a href="#features" className="btn-ghost-gold rounded-full px-8 py-4 text-sm font-medium">
-              Explore Features
+            <a href="#templates" className="btn-ghost-gold rounded-full px-8 py-4 text-sm font-medium">
+              Browse Templates
             </a>
           </div>
         </div>
@@ -492,6 +564,12 @@ function App() {
         </div>
       </section>
 
+      {/* Templates Gallery */}
+      <Templates onApply={applyTemplate} />
+
+      {/* History Archive */}
+      <HistorySection refreshSignal={historyRefresh} onReapply={reapplyFromHistory} />
+
       {/* Features */}
       <section id="features" className="relative z-10 px-6 py-24 lg:px-12">
         <div className="mx-auto max-w-6xl">
@@ -563,6 +641,9 @@ function App() {
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <FaqAccordion />
 
       {/* CTA */}
       <section className="relative z-10 px-6 py-24 lg:px-12">
