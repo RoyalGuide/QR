@@ -20,7 +20,8 @@ import {
   Globe,
   Lock,
 } from 'lucide-react';
-import { supabase, type QrHistoryItem } from './lib/supabase';
+import { type QrHistoryItem } from './lib/firebase';
+import { saveQrHistory } from './lib/history';
 import { TEMPLATES, type QrTemplate } from './lib/templates';
 import Templates from './components/Templates';
 import HistorySection from './components/HistorySection';
@@ -113,12 +114,12 @@ function App() {
 
   const reapplyFromHistory = (item: QrHistoryItem) => {
     setText(item.content);
-    if (item.dark_color) setDarkColor(item.dark_color);
-    if (item.light_color) setLightColor(item.light_color);
+    if (item.darkColor) setDarkColor(item.darkColor);
+    if (item.lightColor) setLightColor(item.lightColor);
     if (item.size) setSize(item.size);
     setLogo(null);
-    if (item.image_data) {
-      setQrCodeUrl(item.image_data);
+    if (item.imageData) {
+      setQrCodeUrl(item.imageData);
     }
     if (item.filename) setFilename(item.filename);
     setActivePreset(-1);
@@ -214,16 +215,15 @@ function App() {
 
       // Save to history
       try {
-        const { error: insertError } = await supabase.from('qr_history').insert({
+        await saveQrHistory({
           content: text,
-          dark_color: darkColor,
-          light_color: lightColor,
+          darkColor,
+          lightColor,
           size: qrSize,
-          has_logo: !!logo,
-          image_data: imageData,
+          hasLogo: !!logo,
+          imageData,
           filename: finalName,
         });
-        if (insertError) throw insertError;
         setHistoryRefresh((r) => r + 1);
         setHistoryToast('Saved to your history');
       } catch {

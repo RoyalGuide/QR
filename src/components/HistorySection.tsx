@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Download, Trash2, RefreshCw, History, Clock } from 'lucide-react';
-import { supabase, type QrHistoryItem } from '../lib/supabase';
+import { type QrHistoryItem, fetchQrHistory, deleteQrHistory } from '../lib/history';
 
 type Props = {
   refreshSignal: number;
@@ -16,13 +16,8 @@ function HistorySection({ refreshSignal, onReapply }: Props) {
     setLoading(true);
     setError('');
     try {
-      const { data, error: fetchError } = await supabase
-        .from('qr_history')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(24);
-      if (fetchError) throw fetchError;
-      setItems(data ?? []);
+      const data = await fetchQrHistory();
+      setItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load history');
     } finally {
@@ -36,8 +31,7 @@ function HistorySection({ refreshSignal, onReapply }: Props) {
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      const { error: delError } = await supabase.from('qr_history').delete().eq('id', id);
-      if (delError) throw delError;
+      await deleteQrHistory(id);
       setItems((prev) => prev.filter((it) => it.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
@@ -45,9 +39,9 @@ function HistorySection({ refreshSignal, onReapply }: Props) {
   }, []);
 
   const handleDownload = useCallback((item: QrHistoryItem) => {
-    if (!item.image_data) return;
+    if (!item.imageData) return;
     const link = document.createElement('a');
-    link.href = item.image_data;
+    link.href = item.imageData;
     link.download = `${item.filename || 'aurea-qrcode'}.png`;
     document.body.appendChild(link);
     link.click();
@@ -98,8 +92,8 @@ function HistorySection({ refreshSignal, onReapply }: Props) {
               >
                 {/* Thumbnail */}
                 <div className="relative flex items-center justify-center bg-white p-4">
-                  {item.image_data ? (
-                    <img src={item.image_data} alt={item.content} className="h-32 w-32 object-contain" />
+                  {item.imageData ? (
+                    <img src={item.imageData} alt={item.content} className="h-32 w-32 object-contain" />
                   ) : (
                     <div className="h-32 w-32" />
                   )}
@@ -108,7 +102,7 @@ function HistorySection({ refreshSignal, onReapply }: Props) {
                 <div className="p-4">
                   <div className="flex items-center gap-1.5 text-xs text-gold-200/40">
                     <Clock className="h-3 w-3" />
-                    {new Date(item.created_at).toLocaleDateString(undefined, {
+                    {new Date(item.createdAt).toLocaleDateString(undefined, {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
@@ -120,7 +114,7 @@ function HistorySection({ refreshSignal, onReapply }: Props) {
                   </p>
                   <div className="mt-2 flex items-center gap-2 text-xs text-gold-200/40">
                     <span className="rounded-md bg-gold-400/10 px-1.5 py-0.5">{item.size || 1080}px</span>
-                    {item.has_logo && (
+                    {item.hasLogo && (
                       <span className="rounded-md bg-gold-400/10 px-1.5 py-0.5">Crest</span>
                     )}
                   </div>
