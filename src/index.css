@@ -1,3 +1,110 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background-color: #070608;
+    color: #f6eccf;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: rgba(212, 167, 60, 0.3);
+    color: #fbf7ed;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  .gold-text {
+    background: linear-gradient(100deg, #a06d1d 0%, #f6eccf 25%, #d4a73c 50%, #fbf7ed 70%, #a06d1d 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 5s linear infinite;
+  }
+
+  .gold-border {
+    border: 1px solid transparent;
+    border-image: linear-gradient(135deg, rgba(212,167,60,0.6), rgba(212,167,60,0.05) 50%, rgba(212,167,60,0.6)) 1;
+  }
+
+  .glass {
+    background: linear-gradient(160deg, rgba(28,24,40,0.85) 0%, rgba(12,10,18,0.9) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .ornament {
+    position: relative;
+  }
+  .ornament::before,
+  .ornament::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 80px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,167,60,0.5), transparent);
+  }
+  .ornament::before { right: calc(100% + 16px); }
+  .ornament::after { left: calc(100% + 16px); background: linear-gradient(90deg, transparent, rgba(212,167,60,0.5), transparent); }
+
+  .btn-gold {
+    position: relative;
+    background: linear-gradient(135deg, #d4a73c 0%, #f6eccf 50%, #c08c28 100%);
+    background-size: 200% auto;
+    color: #0c0a12;
+    transition: all 0.4s ease;
+  }
+  .btn-gold:hover {
+    background-position: right center;
+    box-shadow: 0 8px 30px rgba(212,167,60,0.4);
+    transform: translateY(-2px);
+  }
+  .btn-gold:active {
+    transform: translateY(0);
+  }
+
+  .btn-ghost-gold {
+    border: 1px solid rgba(212,167,60,0.35);
+    color: #f6eccf;
+    transition: all 0.4s ease;
+  }
+  .btn-ghost-gold:hover {
+    border-color: rgba(212,167,60,0.8);
+    background: rgba(212,167,60,0.08);
+    box-shadow: 0 0 24px rgba(212,167,60,0.15);
+  }
+}
+
+@layer utilities {
+  .text-shadow-gold {
+    text-shadow: 0 2px 30px rgba(212,167,60,0.25);
+  }
+  .glow-gold {
+    box-shadow: 0 0 60px rgba(212,167,60,0.15), 0 0 120px rgba(212,167,60,0.05);
+  }
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 70%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #0c0a12; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7d5216, #2a2440);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: #a06d1d; }
